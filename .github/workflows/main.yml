@@ -1,0 +1,19 @@
+name: Assignment Action
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # Allows you to run it manually from the Actions tab
+
+jobs:
+  show-email:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Step containing my email 24f2002559@ds.study.iitm.ac.in
+        run: echo "This step shows my email address."
+
+      - name: Done
+        run: echo "Workflow completed successfully."
