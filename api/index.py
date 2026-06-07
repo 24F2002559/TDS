@@ -80,4 +80,4 @@ async def analyse_latency(request: Request):
         region_records = [r for r in TELEMETRY if r["region"] == region]
         result[region] = compute_metrics(region_records, threshold)
 
-    return result
+    return {"regions": result}
