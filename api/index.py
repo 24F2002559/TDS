@@ -4,11 +4,10 @@ import statistics
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import Response
 
 app = FastAPI()
 
-# CORS middleware (optional – keep for actual browser requests)
+# 1. Standard CORS middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -16,18 +15,21 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 👇 Middleware that forces the CORS header on ALL responses
+# 2. Middleware that forces the CORS header on EVERY response
 class ForceCORSHeader(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
         response = await call_next(request)
         response.headers["Access-Control-Allow-Origin"] = "*"
-        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
-        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
         return response
 
 app.add_middleware(ForceCORSHeader)
 
-# Load telemetry data
+# 3. Handle preflight OPTIONS requests explicitly (so they return 200, not 405)
+@app.options("/")
+def preflight():
+    return {"message": "OK"}
+
+# Load the telemetry data
 with open("q-vercel-latency.json", "r") as f:
     TELEMETRY = json.load(f)
 
