@@ -26,8 +26,10 @@ def compute_metrics(records, threshold):
             "avg_uptime": 0,
             "breaches": 0
         }
-    latencies = [r["latency"] for r in records]
-    uptimes = [r["uptime"] for r in records]
+    # Use the correct keys: latency_ms, uptime_pct
+    latencies = [r["latency_ms"] for r in records]
+    uptimes = [r["uptime_pct"] for r in records]
+
     avg_lat = statistics.mean(latencies)
     avg_upt = statistics.mean(uptimes)
     breaches = sum(1 for l in latencies if l > threshold)
