@@ -16,13 +16,6 @@ app.add_middleware(
     expose_headers=["*"]
 )
 
-CORS_HEADERS = {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization",
-    "Access-Control-Expose-Headers": "Access-Control-Allow-Origin",
-}
-
 # 2. Middleware that forces the CORS header on EVERY response
 class ForceCORSHeader(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
@@ -32,7 +25,7 @@ class ForceCORSHeader(BaseHTTPMiddleware):
 
 app.add_middleware(ForceCORSHeader)
 
-# 3. Handle preflight OPTIONS requests explicitly (so they return 200, not 405)
+# 3. Handle preflight OPTIONS requests explicitly
 @app.options("/")
 def preflight():
     return {"message": "OK"}
@@ -49,6 +42,7 @@ def compute_metrics(records, threshold):
             "avg_uptime": 0,
             "breaches": 0
         }
+
     latencies = [r["latency_ms"] for r in records]
     uptimes = [r["uptime_pct"] for r in records]
 
@@ -56,11 +50,19 @@ def compute_metrics(records, threshold):
     avg_upt = statistics.mean(uptimes)
     breaches = sum(1 for l in latencies if l > threshold)
 
+    # 95th percentile using linear interpolation (standard method)
     sorted_lat = sorted(latencies)
     n = len(sorted_lat)
-    idx = math.ceil(0.95 * n) - 1
-    idx = min(idx, n - 1)
-    p95_lat = sorted_lat[idx]
+    if n == 0:
+        p95_lat = 0
+    else:
+        k = (n - 1) * 0.95
+        f = int(math.floor(k))
+        c = int(math.ceil(k))
+        if f == c:
+            p95_lat = sorted_lat[f]
+        else:
+            p95_lat = sorted_lat[f] + (k - f) * (sorted_lat[c] - sorted_lat[f])
 
     return {
         "avg_latency": avg_lat,
