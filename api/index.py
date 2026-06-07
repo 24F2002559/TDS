@@ -3,10 +3,12 @@ import math
 import statistics
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
+from starlette.responses import Response
 
 app = FastAPI()
 
-# Allow CORS from any origin for POST requests
+# CORS middleware (optional – keep for actual browser requests)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -14,7 +16,18 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Load the telemetry data once when the app starts
+# 👇 Middleware that forces the CORS header on ALL responses
+class ForceCORSHeader(BaseHTTPMiddleware):
+    async def dispatch(self, request, call_next):
+        response = await call_next(request)
+        response.headers["Access-Control-Allow-Origin"] = "*"
+        response.headers["Access-Control-Allow-Methods"] = "POST, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type"
+        return response
+
+app.add_middleware(ForceCORSHeader)
+
+# Load telemetry data
 with open("q-vercel-latency.json", "r") as f:
     TELEMETRY = json.load(f)
 
@@ -26,7 +39,6 @@ def compute_metrics(records, threshold):
             "avg_uptime": 0,
             "breaches": 0
         }
-    # Use the correct keys: latency_ms, uptime_pct
     latencies = [r["latency_ms"] for r in records]
     uptimes = [r["uptime_pct"] for r in records]
 
@@ -34,7 +46,6 @@ def compute_metrics(records, threshold):
     avg_upt = statistics.mean(uptimes)
     breaches = sum(1 for l in latencies if l > threshold)
 
-    # Calculate 95th percentile using nearest‑rank
     sorted_lat = sorted(latencies)
     n = len(sorted_lat)
     idx = math.ceil(0.95 * n) - 1
